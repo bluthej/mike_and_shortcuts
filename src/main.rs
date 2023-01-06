@@ -1,49 +1,52 @@
 use std::io;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (n, shortcuts) = read_from_stdin()?;
-    let n = n.trim().parse::<usize>()?;
-    let shortcuts: Result<Vec<usize>, _> = shortcuts
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    io::stdin().read_line(&mut input)?;
+    let shortcuts = input.lines().skip(1).next().unwrap();
+    let shortcuts = shortcuts
         .trim()
         .split(" ")
         .map(|a| a.parse::<usize>())
-        .collect();
-    let shortcuts = shortcuts?;
+        .collect::<Result<Vec<usize>, _>>()?;
+    let shortcuts: Vec<usize> = shortcuts.iter().map(|i| i - 1).collect();
+    let n = shortcuts.len();
 
-    let min_shortcuts = shortcuts.iter().min().unwrap().clone();
+    let mut energies: Vec<Option<usize>> = vec![None; n];
 
-    let mut energies: Vec<usize> = (0..n).collect();
+    walk(0, 0, &shortcuts, &mut energies);
 
-    let mut i = 0;
-    let mut e = 1;
-    while i < n {
-        if shortcuts[i] > i + 1 {
-            i = shortcuts[i] - 1;
-            energies[i] = e;
-            e += 1;
-        } else {
-            i += 1;
-        }
-    }
-    dbg!(&energies);
+    println!(
+        "{}",
+        energies
+            .into_iter()
+            .filter_map(|e| e.and_then(|v| Some(v.to_string())))
+            .collect::<Vec<String>>()
+            .join(" ")
+    );
 
-    //for i in 1..=n {
-    //if i <= min_shortcuts {
-    //let e = (i - 1).min(1 + min_shortcuts - i);
-    //energies[i - 1] = e;
-    //continue;
-    //}
-    //}
-    //dbg!(energies);
     Ok(())
 }
 
-fn read_from_stdin() -> io::Result<(String, String)> {
-    let mut n = String::new();
-    io::stdin().read_line(&mut n)?;
+fn walk(current: usize, energy: usize, shortcuts: &[usize], energies: &mut [Option<usize>]) {
+    energies[current] = Some(energy);
 
-    let mut shortcuts = String::new();
-    io::stdin().read_line(&mut shortcuts)?;
+    let next_energy = energy + 1;
 
-    Ok((n, shortcuts))
+    let next = shortcuts[current];
+    if energies[next].is_none() || energies[next] > Some(next_energy) {
+        walk(next, next_energy, shortcuts, energies);
+    }
+
+    let next = current + 1;
+    let n = energies.len();
+    if next < n && (energies[next].is_none() || energies[next] > Some(next_energy)) {
+        walk(next, next_energy, shortcuts, energies);
+    }
+
+    let next = current.saturating_sub(1);
+    if next > 1 && (energies[next].is_none() || energies[next] > Some(next_energy)) {
+        walk(next, next_energy, shortcuts, energies);
+    }
 }
